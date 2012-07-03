@@ -36,7 +36,7 @@ class AccountTests(TestCase):
                                      provider='facebook',
                                      site=Site.objects.get_current())
 
-    def test_email_verification_mandatory(self):
+    def _test_email_verification_mandatory(self):
         c = Client()
         # Signup
         resp = c.post(reverse('account_signup'),
@@ -78,7 +78,7 @@ class AccountTests(TestCase):
 
 
 
-    def x_test_email_escaping(self):
+    def _x_test_email_escaping(self):
         """
         Test is only valid if emailconfirmation is listed after
         allauth in INSTALLED_APPS
