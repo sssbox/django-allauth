@@ -1,5 +1,6 @@
 from django.template.defaulttags import token_kwargs
 from django import template
+from django.conf import settings
 
 from allauth.socialaccount import providers
 
@@ -35,11 +36,12 @@ def provider_login_url(parser, token):
     provider_id = bits[1]
     params = token_kwargs(bits[2:], parser, support_legacy=False)
     return ProviderLoginURLNode(provider_id, params)
-    
+
 class ProvidersMediaJSNode(template.Node):
     def render(self, context):
-        request = context['request']
-        ret = '\n'.join([p.media_js(request) 
+        try: request = context['request']
+        except KeyError: return ''
+        ret = '\n'.join([p.media_js(request)
                          for p in providers.registry.get_list()])
         return ret
 
