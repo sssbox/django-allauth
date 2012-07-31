@@ -297,7 +297,7 @@ class SignupForm(BaseSignupForm):
             confirmed = False
 
         new_user = self.create_user()
-        super(SignupForm, self).save(new_user)
+        super(SignupForm, self).save(new_user, request=request)
 
         # @@@ clean up some of the repetition below -- DRY!
         if confirmed:
