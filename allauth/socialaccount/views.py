@@ -22,21 +22,29 @@ def signup(request, **kwargs):
     template_name = kwargs.pop("template_name", 'socialaccount/signup.html')
     if request.method == "POST":
         form = form_class(request.POST, sociallogin=sociallogin)
-        if form.is_valid():
-            form.save(request=request)
-            return helpers.complete_social_signup(request, sociallogin)
     else:
+        # Weird hack, in order to validate the social auth information to see if we have everything we need, we need to create a fake POST dict.
         form = form_class(sociallogin=sociallogin)
+        POST = {}
+        for field in form.fields:
+            POST[field] = form.fields[field].initial
+        form = form_class(POST, sociallogin=sociallogin)
+    # Weird hack, this should usually be in POST, but we don't care if we grab info straight from the socialauth,
+    # if we have all the info we need, go for it!
+    if form.is_valid():
+        form.save(request=request)
+        return helpers.complete_social_signup(request, sociallogin)
+
     dictionary = dict(site=Site.objects.get_current(),
                       account=sociallogin.account,
                       form=form)
-    return render_to_response(template_name, dictionary, 
+    return render_to_response(template_name, dictionary,
                               RequestContext(request))
 
 
 def login_cancelled(request):
     d = {}
-    return render_to_response('socialaccount/login_cancelled.html', d, 
+    return render_to_response('socialaccount/login_cancelled.html', d,
                               context_instance=RequestContext(request))
 
 
@@ -50,7 +58,7 @@ def connections(request):
     if request.method == 'POST':
         form = DisconnectForm(request.POST, user=request.user)
         if form.is_valid():
-            messages.add_message(request, messages.INFO, 
+            messages.add_message(request, messages.INFO,
                                  _('The social account has been disconnected'))
             form.save()
             form = None
