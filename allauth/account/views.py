@@ -21,6 +21,7 @@ from forms import AddEmailForm, ChangePasswordForm
 from forms import LoginForm, ResetPasswordKeyForm
 from forms import ResetPasswordForm, SetPasswordForm, SignupForm
 from utils import sync_user_email_addresses
+from signals import user_changed_password, user_set_password, user_reset_password
 
 def shared_sign(request, login_form=None, signup_form=None):
     if not login_form:
@@ -144,6 +145,7 @@ def password_change(request, **kwargs):
             messages.add_message(request, messages.SUCCESS,
                 ugettext(u"Password successfully changed.")
             )
+            user_changed_password.send(sender=request.user.__class__, request=request, user=request.user)
             password_change_form = form_class(request.user)
     else:
         password_change_form = form_class(request.user)
@@ -164,6 +166,7 @@ def password_set(request, **kwargs):
         password_set_form = form_class(request.user, request.POST)
         if password_set_form.is_valid():
             password_set_form.save()
+            user_set_password.send(sender=request.user.__class__, request=request, user=request.user)
             messages.add_message(request, messages.SUCCESS,
                 ugettext(u"Password successfully set.")
             )
@@ -214,6 +217,7 @@ def password_reset_from_key(request, uidb36, key, **kwargs):
             password_reset_key_form = form_class(request.POST, user=user, temp_key=key)
             if password_reset_key_form.is_valid():
                 password_reset_key_form.save()
+                user_reset_password.send(sender=user.__class__, request=request, user=user)
                 messages.add_message(request, messages.SUCCESS,
                     ugettext(u"Password successfully changed.")
                 )
