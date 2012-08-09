@@ -17,7 +17,7 @@ from django.utils import importlib
 
 from emailconfirmation.models import EmailAddress, EmailConfirmation
 
-from signals import user_logged_in
+from signals import user_logged_in, user_signed_up
 
 import app_settings
 
@@ -106,6 +106,7 @@ def perform_login(request, user, redirect_url=None):
 
 
 def complete_signup(request, user, success_url):
+    user_signed_up.send(sender=user.__class__, request=request, user=user)
     return perform_login(request, user, redirect_url=success_url)
 
 
