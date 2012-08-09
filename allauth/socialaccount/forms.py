@@ -23,9 +23,9 @@ class SignupForm(BaseSignupForm):
         new_user = self.create_user()
         self.sociallogin.account.user = new_user
         self.sociallogin.save()
-        super(SignupForm, self).save(new_user) 
+        super(SignupForm, self).save(new_user)
         # Confirmation last (save may alter first_name etc -- used in mail)
-        send_email_confirmation(new_user, request=request)
+#        send_email_confirmation(new_user, request=request)
         return new_user
 
 

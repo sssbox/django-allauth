@@ -48,7 +48,7 @@ def _process_signup(request, sociallogin):
         # (create user, send email, in active etc..)
         u = sociallogin.account.user
         u.username = generate_unique_username(u.username
-                                              or email 
+                                              or email
                                               or 'user')
         u.last_name = (u.last_name or '') \
             [0:User._meta.get_field('last_name').max_length]
@@ -57,7 +57,7 @@ def _process_signup(request, sociallogin):
         u.email = email or ''
         u.set_unusable_password()
         sociallogin.save()
-        send_email_confirmation(u, request=request)
+#        send_email_confirmation(u, request=request)
         ret = complete_social_signup(request, sociallogin)
     return ret
 
@@ -70,7 +70,7 @@ def _login_social_account(request, sociallogin):
             {},
             context_instance=RequestContext(request))
     else:
-        ret = perform_login(request, user, 
+        ret = perform_login(request, user,
                             redirect_url=sociallogin.get_redirect_url())
     return ret
 
@@ -103,7 +103,7 @@ def complete_social_login(request, sociallogin):
             sociallogin.save()
             default_next = reverse('socialaccount_connections')
             next = sociallogin.get_redirect_url(fallback=default_next)
-            messages.add_message(request, messages.INFO, 
+            messages.add_message(request, messages.INFO,
                                  _('The social account has been connected'
                                    ' to your existing account'))
             return HttpResponseRedirect(next)
@@ -166,6 +166,6 @@ def _copy_avatar(request, user, account):
 def complete_social_signup(request, sociallogin):
     if app_settings.AVATAR_SUPPORT:
         _copy_avatar(request, sociallogin.account.user, sociallogin.account)
-    return complete_signup(request, 
-                           sociallogin.account.user, 
+    return complete_signup(request,
+                           sociallogin.account.user,
                            sociallogin.get_redirect_url())

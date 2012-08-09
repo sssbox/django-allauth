@@ -319,8 +319,8 @@ class SignupForm(BaseSignupForm):
                             }
                         )
                     EmailAddress.objects.add_email(new_user, email)
-        else:
-            send_email_confirmation(new_user, request=request)
+#        else:
+#            send_email_confirmation(new_user, request=request)
 
         self.after_signup(new_user)
 
