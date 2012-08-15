@@ -1,3 +1,18 @@
+2012-08-04  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* account: When signing up, instead of generating a completely
+	random username a more sensible username is automatically derived
+	from first/last name or e-mail.
+
+2012-07-18  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* Version 0.7.0 released.
+
+2012-07-06  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* Facebook: Facundo Gaich contributed support for dynamically
+	deriving the Facebook locale from the Django locale, thanks!.
+
 2012-06-27  Raymond Penners  <raymond.penners@intenct.nl>
 
 	* OAuth: All OAuth/OAuth2 tokens are now consistently stored
@@ -21,7 +36,7 @@
 
 	* socialaccount: When signing up, user.first/last_name where
 	always taken from the provider signup data, even when a custom
-	signup form was in place that offering user inputs for editting
+	signup form was in place that offered user inputs for editting
 	these fields. Fixed.
 
 2012-06-20  Raymond Penners  <raymond.penners@intenct.nl>
