@@ -80,7 +80,7 @@ def email(request, **kwargs):
                             "email": add_email_form.cleaned_data["email"]
                         }
                     )
-                add_email_form = form_class() # @@@
+                return HttpResponseRedirect(reverse(email))
         else:
             add_email_form = form_class()
             if request.POST.get("email"):
@@ -97,6 +97,7 @@ def email(request, **kwargs):
                             }
                         )
                         EmailConfirmation.objects.send_confirmation(email_address)
+                        return HttpResponseRedirect(reverse(email))
                     except EmailAddress.DoesNotExist:
                         pass
                 elif request.POST.has_key("action_remove"):
@@ -106,23 +107,35 @@ def email(request, **kwargs):
                             user=request.user,
                             email=email
                         )
-                        email_address.delete()
-                        messages.add_message(request, messages.SUCCESS,
-                            ugettext("Removed e-mail address %(email)s") % {
-                                "email": email,
-                            }
-                        )
+                        if email_address.primary:
+                            messages.add_message(request, messages.ERROR,
+                                ugettext("Primary e-mail address %(email)s could not be removed.") % {
+                                    "email": email,
+                                }
+                            )
+                        else:
+                            email_address.delete()
+                            messages.add_message(request, messages.SUCCESS,
+                                ugettext("Removed e-mail address %(email)s") % {
+                                    "email": email,
+                                }
+                            )
+                            return HttpResponseRedirect(reverse(email))
                     except EmailAddress.DoesNotExist:
                         pass
                 elif request.POST.has_key("action_primary"):
                     email = request.POST["email"]
-                    email_address = EmailAddress.objects.get(
-                        user=request.user,
-                        email=email,
-                    )
-                    email_address.set_as_primary()
-                    messages.add_message(request, messages.SUCCESS,
-                                         ugettext("Primary e-mail address set"))
+                    try:
+                        email_address = EmailAddress.objects.get(
+                            user=request.user,
+                            email=email,
+                        )
+                        email_address.set_as_primary()
+                        messages.add_message(request, messages.SUCCESS,
+                                             ugettext("Primary e-mail address set"))
+                        return HttpResponseRedirect(reverse(email))
+                    except EmailAddress.DoesNotExist:
+                        pass
     else:
         add_email_form = form_class()
     ctx = { "add_email_form": add_email_form }
