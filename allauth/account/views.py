@@ -23,6 +23,10 @@ from forms import ResetPasswordForm, SetPasswordForm, SignupForm
 from utils import sync_user_email_addresses
 from signals import user_changed_password, user_set_password, user_reset_password
 
+from django.dispatch.dispatcher import Signal
+email_changed_signal = Signal(providing_args=['user'])
+email_added_signal = Signal(providing_args=['user'])
+
 def shared_sign(request, login_form=None, signup_form=None):
     if not login_form:
         login_form = LoginForm()
@@ -80,6 +84,7 @@ def email(request, **kwargs):
                             "email": add_email_form.cleaned_data["email"]
                         }
                     )
+                email_added_signal.send(sender=request.user.__class__, user=request.user)
                 return HttpResponseRedirect(reverse('account_email'))
         else:
             add_email_form = form_class()
@@ -133,6 +138,7 @@ def email(request, **kwargs):
                         email_address.set_as_primary()
                         messages.add_message(request, messages.SUCCESS,
                                              ugettext("Primary e-mail address set"))
+                        email_changed_signal.send(sender=request.user.__class__, user=request.user)
                         return HttpResponseRedirect(reverse('account_email'))
                     except EmailAddress.DoesNotExist:
                         pass
