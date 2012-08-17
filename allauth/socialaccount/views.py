@@ -22,6 +22,7 @@ def signup(request, **kwargs):
     template_name = kwargs.pop("template_name", 'socialaccount/signup.html')
     if request.method == "POST":
         form = form_class(request.POST, sociallogin=sociallogin)
+        hack = False
     else:
         # Weird hack, in order to validate the social auth information to see if we have everything we need, we need to create a fake POST dict.
         form = form_class(sociallogin=sociallogin)
@@ -29,11 +30,15 @@ def signup(request, **kwargs):
         for field in form.fields:
             POST[field] = form.fields[field].initial
         form = form_class(POST, sociallogin=sociallogin)
+        hack = True
+
     # Weird hack, this should usually be in POST, but we don't care if we grab info straight from the socialauth,
     # if we have all the info we need, go for it!
     if form.is_valid():
         form.save(request=request)
         return helpers.complete_social_signup(request, sociallogin)
+    elif hack:
+        form = form_class(sociallogin=sociallogin)
 
     dictionary = dict(site=Site.objects.get_current(),
                       account=sociallogin.account,
