@@ -60,7 +60,7 @@ Overview
 Supported Flows
 ---------------
 
-- Signup of a both local and social accounts
+- Signup of both local and social accounts
 
 - Connecting more than one social account to a local account
 
@@ -87,6 +87,8 @@ Supported Providers
 - LinkedIn
 
 - OpenId
+
+- SoundCloud (OAuth2)
 
 - Twitter
 
@@ -149,6 +151,7 @@ settings.py::
         'allauth.socialaccount.providers.github',
         'allauth.socialaccount.providers.linkedin',
         'allauth.socialaccount.providers.openid',
+        'allauth.socialaccount.providers.soundcloud',
         'allauth.socialaccount.providers.twitter',
         'emailconfirmation',
 
@@ -228,6 +231,14 @@ EMAIL_CONFIRMATION_DAYS (=# of days, no default)
 Upgrading
 ---------
 
+From 0.7.0
+**********
+
+- `{% load account_tags %}` is deprecated, simply use: `{% load account %}`
+
+- `{% load socialaccount_tags %}` is deprecated, simply use: 
+  `{% load socialaccount %}`
+
 From 0.5.0
 **********
 
@@ -272,6 +283,24 @@ app, containing a client ID and API secret. You must add a `SocialApp`
 record per provider via the Django admin containing these app
 credentials.
 
+When creating the OAuth app on the side of the provider pay special
+attention to the callback URL (sometimes also referred to as redirect
+URL). If you do not configure this correctly, you will receive login
+failures when attemtping to log in, such as::
+
+    An error occured while attempting to login via your social network account.
+
+Use a callback URL of the form::
+
+    http://example.com/accounts/twitter/login/callback/
+    http://example.com/accounts/soundcloud/login/callback/
+    ...
+
+For local development, use the following::
+
+    http://127.0.0.1:8000/accounts/twitter/callback/
+
+
 Facebook
 --------
 
@@ -286,12 +315,12 @@ everybody's cup of tea.
 
 To initiate a login use::
 
-    {% load socialaccount_tags %}
+    {% load socialaccount %}
     <a href="{% provider_login_url "facebook" method="js_sdk" %}">Facebook Connect</a>
 
 or::
 
-    {% load socialaccount_tags %}
+    {% load socialaccount %}
     <a href="{% provider_login_url "facebook" method="oauth2" %}">Facebook OAuth2</a>
 
 The following Facebook settings are available::
@@ -362,8 +391,40 @@ follows::
 If you want to manually include login links yourself, you can use the
 following template tag::
 
-    {% load socialaccount_tags %}
+    {% load socialaccount %}
     <a href="{% provider_login_url "openid" openid="https://www.google.com/accounts/o8/id" next="/success/url/" %}">Google</a>
+
+
+SoundCloud
+----------
+
+SoundCloud allows you to choose between OAuth1 and OAuth2.  Choose the
+latter. 
+
+
+Signals
+=======
+
+The following signals are emitted:
+
+- `allauth.account.signals.user_logged_in`
+
+  Sent when a user logs in.
+
+- `allauth.account.signals.user_signed_up`
+
+  Sent when a user signs up for an account. This is signal is
+  typically followed by a `user_logged_in`, unless e-mail verification
+  prohibits the user to log in.
+
+- `allauth.socialaccount.signals.pre_social_login`
+
+  Sent after a user successfully authenticates via a social provider,
+  but before the login is fully processed. This signal is emitted as
+  part of the social login and/or signup process, as well as when
+  connecting additional social accounts to an existing account. Access
+  tokens and profile information, if applicable for the provider, is
+  provided.
 
 
 Templates
@@ -374,9 +435,9 @@ Template Tags
 
 The following template tag libraries are available:
 
-- `account_tags`: tags for dealing with accounts in general
+- `account`: tags for dealing with accounts in general
 
-- `socialaccount_tags`: tags focused on social accounts
+- `socialaccount`: tags focused on social accounts
 
 
 Account Tags
@@ -386,13 +447,13 @@ Use `user_display` to render a user name without making assumptions on
 how the user is represented (e.g. render the username, or first
 name?)::
 
-    {% load account_tags %}
+    {% load account %}
 
     {% user_display user %}
 
 Or, if you need to use in a `{% blocktrans %}`::
 
-    {% load account_tags %}
+    {% load account %}
 
     {% user_display user as user_display}
     {% blocktrans %}{{ user_display }} has logged in...{% endblocktrans %}
@@ -406,7 +467,7 @@ Social Account Tags
 
 Use the `provider_login_url` tag to generate provider specific login URLs::
 
-    {% load socialaccount_tags %}
+    {% load socialaccount %}
 
     <a href="{% provider_login_url "openid" openid="https://www.google.com/accounts/o8/id" next="/success/url/" %}">Google</a>
     <a href="{% provider_login_url "twitter" %}">Twitter</a>
@@ -448,6 +509,10 @@ Showcase
 - http://www.mycareerstack.com
 - http://jug.gl
 - http://www.charityblossom.org/
+- http://www.superreceptionist.in
+- http://www.edithuddle.com
+- http://kwatsi.com
+- http://www.smartgoalapp.com
 - ...
 
 Please mail me (raymond.penners@intenct.nl) links to sites that have
