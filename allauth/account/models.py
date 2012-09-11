@@ -18,23 +18,23 @@ from utils import random_token
 from managers import EmailAddressManager, EmailConfirmationManager
 
 class EmailAddress(models.Model):
-    
-    user = models.ForeignKey(User)
+
+    user = models.ForeignKey(User, related_name='emailaddresses')
     email = models.EmailField(unique=app_settings.UNIQUE_EMAIL)
     verified = models.BooleanField(default=False)
     primary = models.BooleanField(default=False)
-    
+
     objects = EmailAddressManager()
-    
+
     class Meta:
         verbose_name = _("email address")
         verbose_name_plural = _("email addresses")
         if not app_settings.UNIQUE_EMAIL:
             unique_together = [("user", "email")]
-    
+
     def __unicode__(self):
         return u"%s (%s)" % (self.email, self.user)
-    
+
     def set_as_primary(self, conditional=False):
         old_primary = EmailAddress.objects.get_primary(self.user)
         if old_primary:
@@ -47,12 +47,12 @@ class EmailAddress(models.Model):
         self.user.email = self.email
         self.user.save()
         return True
-    
+
     def send_confirmation(self, request):
         confirmation = EmailConfirmation.create(self)
         confirmation.send(request)
         return confirmation
-    
+
     def change(self, request, new_email, confirm=True):
         """
         Given a new email address, change self and re-confirm.
@@ -68,31 +68,31 @@ class EmailAddress(models.Model):
 
 
 class EmailConfirmation(models.Model):
-    
+
     email_address = models.ForeignKey(EmailAddress)
     created = models.DateTimeField(default=timezone.now())
     sent = models.DateTimeField(null=True)
     key = models.CharField(max_length=64, unique=True)
-    
+
     objects = EmailConfirmationManager()
-    
+
     class Meta:
         verbose_name = _("email confirmation")
         verbose_name_plural = _("email confirmations")
-    
+
     def __unicode__(self):
         return u"confirmation for %s" % self.email_address
-    
+
     @classmethod
     def create(cls, email_address):
         key = random_token([email_address.email])
         return cls._default_manager.create(email_address=email_address, key=key)
-    
+
     def key_expired(self):
         expiration_date = self.sent + datetime.timedelta(days=app_settings.EMAIL_CONFIRMATION_EXPIRE_DAYS)
         return expiration_date <= timezone.now()
     key_expired.boolean = True
-    
+
     def confirm(self):
         if not self.key_expired() and not self.email_address.verified:
             email_address = self.email_address
@@ -101,7 +101,7 @@ class EmailConfirmation(models.Model):
             email_address.save()
             signals.email_confirmed.send(sender=self.__class__, email_address=email_address)
             return email_address
-    
+
     def send(self, request, **kwargs):
         current_site = kwargs["site"] if "site" in kwargs else Site.objects.get_current()
         activate_url = reverse("account_confirm_email", args=[self.key])
