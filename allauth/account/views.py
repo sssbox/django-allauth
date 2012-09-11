@@ -223,7 +223,7 @@ def email(request, **kwargs):
                                     ).exists():
                             messages.add_message(request, messages.ERROR,
                                     ugettext("Your primary email address must "
-                                        "be verified")
+                                        "be verified"))
                         else:
                             email_address.set_as_primary()
                             messages.add_message(request, messages.SUCCESS,
