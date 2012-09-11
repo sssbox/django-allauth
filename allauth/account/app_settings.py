@@ -6,6 +6,22 @@ class AuthenticationMethod:
     EMAIL = 'email'
     USERNAME_EMAIL = 'username_email'
 
+# Determines the expiration date of e-mail confirmation mails (# of days)
+EMAIL_CONFIRMATION_EXPIRE_DAYS \
+    = getattr(settings, "ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS", 
+              getattr(settings, "EMAIL_CONFIRMATION_DAYS", 3))
+
+# The URL to redirect to after a successful e-mail confirmation, in case of
+# an authenticated user
+EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL \
+    = getattr(settings, "ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL", settings.LOGIN_REDIRECT_URL)
+
+# The URL to redirect to after a successful e-mail confirmation, in case no
+# user is logged in
+EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL \
+    = getattr(settings, "ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL",
+              settings.LOGIN_URL)
+                                         
 # The user is required to hand over an e-mail address when signing up
 EMAIL_REQUIRED = getattr(settings, "ACCOUNT_EMAIL_REQUIRED", False)
 

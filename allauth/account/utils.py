@@ -1,3 +1,6 @@
+import hashlib
+import random
+
 from datetime import timedelta
 try:
     from django.utils.timezone import now
@@ -13,8 +16,6 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth import login
 from django.utils.translation import ugettext_lazy as _, ugettext
 from django.http import HttpResponseRedirect
-
-from emailconfirmation.models import EmailAddress, EmailConfirmation
 
 from allauth.utils import import_callable
 
@@ -76,13 +77,15 @@ def user_display(user):
 
 
 def perform_login(request, user, redirect_url=None):
+    from models import EmailAddress
+
     # not is_active: social users are redirected to a template
     # local users are stopped due to form validation checking is_active
     assert user.is_active
     if (app_settings.EMAIL_VERIFICATION
         and not EmailAddress.objects.filter(user=user,
                                             verified=True).exists()):
-        send_email_confirmation(user, request=request)
+        send_email_confirmation(request, user)
         return render(request,
                       "account/verification_sent.html",
                       { "email": user.email })
@@ -111,7 +114,7 @@ def complete_signup(request, user, success_url):
     return perform_login(request, user, redirect_url=success_url)
 
 
-def send_email_confirmation(user, request=None):
+def send_email_confirmation(request, user):
     """
     E-mail verification mails are sent:
     a) Explicitly: when a user signs up
@@ -122,6 +125,8 @@ def send_email_confirmation(user, request=None):
     sent (consider a user retrying a few times), which is why there is
     a cooldown period before sending a new mail.
     """
+    from models import EmailAddress, EmailConfirmation
+
     COOLDOWN_PERIOD = timedelta(minutes=3)
     email = user.email
     if email:
@@ -133,9 +138,13 @@ def send_email_confirmation(user, request=None):
                         email_address=email_address) \
                 .exists()
             if not email_confirmation_sent:
-                EmailConfirmation.objects.send_confirmation(email_address)
+                email_address.send_confirmation(request)
         except EmailAddress.DoesNotExist:
-            EmailAddress.objects.add_email(user, user.email)
+            email_address = EmailAddress.objects.add_email(request,
+                                                           user, 
+                                                           user.email, 
+                                                           confirm=True)
+            assert email_address
             email_confirmation_sent = False
         if request and not email_confirmation_sent:
             messages.info(request,
@@ -158,10 +167,20 @@ def sync_user_email_addresses(user):
     an EmailAddress record, e.g. in the case of manually created admin
     users.
     """
+    from models import EmailAddress
     if user.email and not EmailAddress.objects.filter(user=user,
                                                       email=user.email).exists():
+        if app_settings.UNIQUE_EMAIL and EmailAddress.objects.filter(email=user.email).exists():
+            # Bail out
+            return
         EmailAddress.objects.create(user=user,
                                     email=user.email,
                                     primary=False,
                                     verified=False)
 
+
+def random_token(extra=None, hash_func=hashlib.sha256):
+    if extra is None:
+        extra = []
+    bits = extra + [str(random.SystemRandom().getrandbits(512))]
+    return hash_func("".join(bits)).hexdigest()

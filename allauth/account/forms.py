@@ -14,10 +14,11 @@ from django.utils.importlib import import_module
 from django.contrib import messages
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.models import Site
 
-from emailconfirmation.models import EmailAddress
+from models import EmailAddress
 
 # from models import PasswordReset
 from utils import perform_login, send_email_confirmation, format_email_subject
@@ -27,8 +28,7 @@ from app_settings import AuthenticationMethod
 
 import app_settings
 
-alnum_re = re.compile(r"^\w+$")
-
+USERNAME_REGEX = UserCreationForm().fields['username'].regex
 
 class PasswordField(forms.CharField):
 
@@ -191,9 +191,9 @@ class BaseSignupForm(_base_signup_form_class()):
 
     def clean_username(self):
         value = self.cleaned_data["username"]
-        if not alnum_re.search(value):
+        if not USERNAME_REGEX.match(value):
             raise forms.ValidationError(_("Usernames can only contain "
-                                          "letters, numbers and underscores."))
+                                          "letters, digits and @/./+/-/_."))
         try:
             User.objects.get(username__iexact=value)
         except User.DoesNotExist:
@@ -206,7 +206,7 @@ class BaseSignupForm(_base_signup_form_class()):
         if app_settings.UNIQUE_EMAIL:
             if value and email_address_exists(value):
                 raise forms.ValidationError \
-                    (_("A user is registered with this e-mail address."))
+                    (_("A user is already registered with this e-mail address."))
         return value
 
     def create_user(self, commit=True):
@@ -313,7 +313,7 @@ class SignupForm(BaseSignupForm):
                         )
                     EmailAddress.objects.add_email(new_user, email)
 #        else:
-#            send_email_confirmation(new_user, request=request)
+#            send_email_confirmation(request, new_user)
 
         self.after_signup(new_user)
 
@@ -344,8 +344,8 @@ class AddEmailForm(UserForm):
     def clean_email(self):
         value = self.cleaned_data["email"]
         errors = {
-            "this_account": _("This e-mail address already associated with this account."),
-            "different_account": _("This e-mail address already associated with another account."),
+            "this_account": _("This e-mail address is already associated with this account."),
+            "different_account": _("This e-mail address is already associated with another account."),
         }
         emails = EmailAddress.objects.filter(email__iexact=value)
         if emails.filter(user=self.user).exists():
@@ -354,9 +354,12 @@ class AddEmailForm(UserForm):
             if emails.exclude(user=self.user).exists():
                 raise forms.ValidationError(errors["different_account"])
         return value
-
-    def save(self):
-        return EmailAddress.objects.add_email(self.user, self.cleaned_data["email"])
+    
+    def save(self, request):
+        return EmailAddress.objects.add_email(request,
+                                              self.user, 
+                                              self.cleaned_data["email"],
+                                              confirm=True)
 
 
 class ChangePasswordForm(UserForm):

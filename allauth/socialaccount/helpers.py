@@ -58,7 +58,7 @@ def _process_signup(request, sociallogin):
         u.email = email or ''
         u.set_unusable_password()
         sociallogin.save()
-#        send_email_confirmation(u, request=request)
+#        send_email_confirmation(request, u)
         ret = complete_social_signup(request, sociallogin)
     return ret
 
@@ -107,9 +107,8 @@ def complete_social_login(request, sociallogin):
             sociallogin.save()
             default_next = reverse('socialaccount_connections')
             next = sociallogin.get_redirect_url(fallback=default_next)
-            messages.add_message(request, messages.INFO,
-                                 _('The social account has been connected'
-                                   ' to your existing account'))
+            messages.add_message(request, messages.INFO, 
+                                 _('The social account has been connected'))
             return HttpResponseRedirect(next)
     else:
         if sociallogin.is_existing:

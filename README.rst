@@ -20,7 +20,7 @@ account.
 
 This approach separates the worlds of local and social
 authentication. However, there are common scenarios to be dealt with
-in boh worlds. For example, an e-mail address passed along by an
+in both worlds. For example, an e-mail address passed along by an
 OpenID provider is not guaranteed to be verified. So, before hooking
 an OpenID account up to a local account the e-mail address must be
 verified. So, e-mail verification needs to be present in both worlds.
@@ -135,11 +135,19 @@ settings.py::
         "django.core.context_processors.request",
         ...
         "allauth.account.context_processors.account",
-        "allauth.socialaccount.context_processors.socialaccount"
+        "allauth.socialaccount.context_processors.socialaccount",
+        ...
     )
 
-    AUTHENTICATION_BACKENDS = ( ...
-        "allauth.account.auth_backends.AuthenticationBackend", )
+    AUTHENTICATION_BACKENDS = (
+        ...
+        # Needed to login by username in Django admin, regardless of `allauth`
+        "django.contrib.auth.backends.ModelBackend",
+
+        # `allauth` specific authentication methods, such as login by e-mail
+        "allauth.account.auth_backends.AuthenticationBackend",
+        ...
+    )
 
     INSTALLED_APPS = (
         ...
@@ -153,13 +161,16 @@ settings.py::
         'allauth.socialaccount.providers.openid',
         'allauth.socialaccount.providers.soundcloud',
         'allauth.socialaccount.providers.twitter',
-        'emailconfirmation',
+        ...
+    )
 
 urls.py::
 
     urlpatterns = patterns('',
         ...
-        (r'^accounts/', include('allauth.urls')))
+        (r'^accounts/', include('allauth.urls')),
+        ...
+    )
 
 
 Configuration
@@ -170,6 +181,17 @@ Available settings:
 ACCOUNT_AUTHENTICATION_METHOD (="username" | "email" | "username_email")
   Specifies the login method to use -- whether the user logs in by
   entering his username, e-mail address, or either one of both.
+
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL (=settings.LOGIN_URL)
+  The URL to redirect to after a successful e-mail confirmation, in case no
+  user is logged in.
+
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL (=settings.LOGIN_REDIRECT_URL)
+  The URL to redirect to after a successful e-mail confirmation, in case of
+  an authenticated user.
+
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS (=3)
+  Determines the expiration date of email confirmation mails (# of days).
 
 ACCOUNT_EMAIL_REQUIRED (=False)
   The user is required to hand over an e-mail address when signing up.
@@ -200,6 +222,12 @@ ACCOUNT_USER_DISPLAY (=a callable returning `user.username`)
   that takes a user as its only argument and returns the display name
   of the user. The default implementation returns `user.username`.
 
+ACCOUNT_USERNAME_REQUIRED (=True)
+  The user is required to enter a username when signing up. Note that
+  the user will be asked to do so even if
+  `ACCOUNT_AUTHENTICATION_METHOD` is set to `email`. Set to `False`
+  when you do not wish to prompt the user to enter a username.
+
 ACCOUNT_PASSWORD_INPUT_RENDER_VALUE (=False)
   `render_value` parameter as passed to `PasswordInput` fields.
 
@@ -223,16 +251,47 @@ SOCIALACCOUNT_AVATAR_SUPPORT (= 'avatar' in settings.INSTALLED_APPS)
 SOCIALACCOUNT_PROVIDERS (= dict)
     Dictionary containing provider specific settings.
 
-EMAIL_CONFIRMATION_DAYS (=# of days, no default)
-  Determines the expiration date of email confirmation mails sent by
-  django-email-confirmation.
-
 
 Upgrading
 ---------
 
+From 0.8.1
+**********
+
+- Dropped support for `CONTACT_EMAIL` from the `account` template
+  context processor. It was never documented and only used in the
+  templates as an example -- there is no need to pollute the `allauth`
+  settings with that. If your templates rely on it then you will have
+  to put it in a context processor yourself.
+
 From 0.7.0
 **********
+
+- `allauth` now depends on Django 1.4 or higher.
+
+- Major impact: dropped dependency on the `emailconfirmation` app, as
+  this project is clearly left unmaintained. Important tickets such
+  as https://github.com/pinax/django-email-confirmation/pull/5 are not
+  being addressed. All models and related functionality have been
+  directly integrated into the `allauth.account` app. When upgrading
+  take care of the following:
+
+  - The `emailconfirmation` setting `EMAIL_CONFIRMATION_DAYS` has been
+    replaced by `ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`.
+
+  - Instead of directly confirming the e-mail address upon the GET
+    request the confirmation is now processed as part of an explicit
+    POST. Therefore, a new template `account/email_confirm.html` must
+    be setup.
+
+  - Existing `emailconfirmation` data should be migrated to the new
+    tables. For this purpose a special management command is
+    available: `python manage.py
+    account_emailconfirmationmigration`. This command does not drop
+    the old `emailconfirmation` tables -- you will have to do this
+    manually yourself. Why not use South? EmailAddress uniqueness
+    depends on the configuration (`ACCOUNT_UNIQUE_EMAIL`), South does
+    not handle settings dependent database models.
 
 - `{% load account_tags %}` is deprecated, simply use: `{% load account %}`
 

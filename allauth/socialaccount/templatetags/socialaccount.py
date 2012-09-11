@@ -13,10 +13,10 @@ class ProviderLoginURLNode(template.Node):
     def render(self, context):
         provider_id = self.provider_id_var.resolve(context)
         provider = providers.registry.by_id(provider_id)
-        query = dict([(name, var.resolve(context)) for name, var
+        query = dict([(str(name), var.resolve(context)) for name, var
                       in self.params.iteritems()])
         request = context['request']
-        if not query.has_key('next'):
+        if 'next' not in query:
             next = request.REQUEST.get('next')
             if next:
                 query['next'] = next

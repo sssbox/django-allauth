@@ -5,12 +5,13 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 from django.utils.http import base36_to_int
 from django.utils.translation import ugettext
-
+from django.utils.translation import ugettext_lazy as _
+from django.views.generic.base import TemplateResponseMixin, View
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from emailconfirmation.models import EmailAddress, EmailConfirmation
+from django.shortcuts import redirect
 
 from django.contrib.auth import logout as django_logout
 
@@ -21,6 +22,10 @@ from forms import AddEmailForm, ChangePasswordForm
 from forms import LoginForm, ResetPasswordKeyForm
 from forms import ResetPasswordForm, SetPasswordForm, SignupForm
 from utils import sync_user_email_addresses
+from models import EmailAddress, EmailConfirmation
+
+import app_settings
+
 from signals import user_changed_password, user_set_password, user_reset_password
 
 from django.dispatch.dispatcher import Signal
@@ -69,16 +74,86 @@ def signup(request, **kwargs):
         form = form_class()
     return shared_sign(request, signup_form=form)
 
+class ConfirmEmailView(TemplateResponseMixin, View):
+    
+    messages = {
+        "email_confirmed": {
+            "level": messages.SUCCESS,
+            "text": _("You have confirmed %(email)s.")
+        }
+    }
+    
+    def get_template_names(self):
+        return {
+            "GET": ["account/email_confirm.html"],
+            "POST": ["account/email_confirmed.html"],
+        }[self.request.method]
+    
+    def get(self, *args, **kwargs):
+        self.object = self.get_object()
+        ctx = self.get_context_data()
+        return self.render_to_response(ctx)
+    
+    def post(self, *args, **kwargs):
+        self.object = confirmation = self.get_object()
+        confirmation.confirm()
+        # Don't -- allauth doesn't tocuh is_active so that sys admin can
+        # use it to block users et al
+        #
+        # user = confirmation.email_address.user
+        # user.is_active = True
+        # user.save()
+        redirect_url = self.get_redirect_url()
+        if not redirect_url:
+            ctx = self.get_context_data()
+            return self.render_to_response(ctx)
+        if self.messages.get("email_confirmed"):
+            messages.add_message(
+                self.request,
+                self.messages["email_confirmed"]["level"],
+                self.messages["email_confirmed"]["text"] % {
+                    "email": confirmation.email_address.email
+                }
+            )
+        return redirect(redirect_url)
+    
+    def get_object(self, queryset=None):
+        if queryset is None:
+            queryset = self.get_queryset()
+        try:
+            return queryset.get(key=self.kwargs["key"].lower())
+        except EmailConfirmation.DoesNotExist:
+            raise Http404()
+    
+    def get_queryset(self):
+        qs = EmailConfirmation.objects.all()
+        qs = qs.select_related("email_address__user")
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        ctx = kwargs
+        ctx["confirmation"] = self.object
+        return ctx
+    
+    def get_redirect_url(self):
+        if self.request.user.is_authenticated():
+            return app_settings.EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL
+        else:
+            return app_settings.EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL
+
+
+confirm_email = ConfirmEmailView.as_view()
+
 @login_required
 def email(request, **kwargs):
     form_class = kwargs.pop("form_class", AddEmailForm)
     template_name = kwargs.pop("template_name", "account/email.html")
     sync_user_email_addresses(request.user)
     if request.method == "POST" and request.user.is_authenticated():
-        if request.POST.has_key("action_add"):
+        if "action_add" in request.POST:
             add_email_form = form_class(request.user, request.POST)
             if add_email_form.is_valid():
-                add_email_form.save()
+                add_email_form.save(request)
                 messages.add_message(request, messages.INFO,
                     ugettext(u"Confirmation e-mail sent to %(email)s") % {
                             "email": add_email_form.cleaned_data["email"]
@@ -89,7 +164,7 @@ def email(request, **kwargs):
         else:
             add_email_form = form_class()
             if request.POST.get("email"):
-                if request.POST.has_key("action_send"):
+                if "action_send" in request.POST:
                     email = request.POST["email"]
                     try:
                         email_address = EmailAddress.objects.get(
@@ -101,11 +176,11 @@ def email(request, **kwargs):
                                 "email": email,
                             }
                         )
-                        EmailConfirmation.objects.send_confirmation(email_address)
+                        email_address.send_confirmation(request)
                         return HttpResponseRedirect(reverse('account_email'))
                     except EmailAddress.DoesNotExist:
                         pass
-                elif request.POST.has_key("action_remove"):
+                elif "action_remove" in request.POST:
                     email = request.POST["email"]
                     try:
                         email_address = EmailAddress.objects.get(
@@ -128,7 +203,7 @@ def email(request, **kwargs):
                             return HttpResponseRedirect(reverse('account_email'))
                     except EmailAddress.DoesNotExist:
                         pass
-                elif request.POST.has_key("action_primary"):
+                elif "action_primary" in request.POST:
                     email = request.POST["email"]
                     try:
                         email_address = EmailAddress.objects.get(
