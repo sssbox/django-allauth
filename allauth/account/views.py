@@ -137,6 +137,9 @@ class ConfirmEmailView(TemplateResponseMixin, View):
     
     def get_redirect_url(self):
         if self.request.user.is_authenticated():
+            redirect_to_name = request.GET.get('redirect_to_name')
+            if redirect_to_name:
+                return reverse(redirect_to_name)
             return app_settings.EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL
         else:
             return app_settings.EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL
