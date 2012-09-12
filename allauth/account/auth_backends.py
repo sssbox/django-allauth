@@ -32,7 +32,7 @@ class AuthenticationBackend(ModelBackend):
         email = credentials.get('email', credentials.get('username'))
         if email:
             users = User.objects.filter(Q(email__iexact=email)
-                                        | Q(emailaddress__email__iexact
+                                        | Q(emailaddresses__email__iexact
                                             =email))
             for user in users:
                 if user.check_password(credentials["password"]):
