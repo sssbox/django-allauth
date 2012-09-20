@@ -28,8 +28,6 @@ import app_settings
 import signals
 
 from django.dispatch.dispatcher import Signal
-email_changed_signal = Signal(providing_args=['user'])
-email_added_signal = Signal(providing_args=['user'])
 
 def shared_sign(request, login_form=None, signup_form=None):
     if not login_form:
