@@ -11,3 +11,6 @@ user_reset_password = Signal(providing_args=["request", "user"])
 
 email_confirmed = Signal(providing_args=["email_address"])
 email_confirmation_sent = Signal(providing_args=["confirmation"])
+
+email_changed_signal = Signal(providing_args=["request", "user"])
+email_added_signal = Signal(providing_args=["request", "user"])
