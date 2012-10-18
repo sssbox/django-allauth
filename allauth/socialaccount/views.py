@@ -25,11 +25,11 @@ def signup(request, **kwargs):
         hack = False
     else:
         # Weird hack, in order to validate the social auth information to see if we have everything we need, we need to create a fake POST dict.
-        form = form_class(sociallogin=sociallogin)
+        form = form_class(sociallogin=sociallogin, request=request)
         POST = {}
         for field in form.fields:
             POST[field] = form.fields[field].initial
-        form = form_class(POST, sociallogin=sociallogin)
+        form = form_class(POST, sociallogin=sociallogin, request=request)
         hack = True
 
     # Weird hack, this should usually be in POST, but we don't care if we grab info straight from the socialauth,
@@ -38,7 +38,7 @@ def signup(request, **kwargs):
         form.save(request=request)
         return helpers.complete_social_signup(request, sociallogin)
     elif hack:
-        form = form_class(sociallogin=sociallogin)
+        form = form_class(sociallogin=sociallogin, request=request)
 
     dictionary = dict(site=Site.objects.get_current(),
                       account=sociallogin.account,
