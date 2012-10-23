@@ -94,7 +94,7 @@ class EmailConfirmation(models.Model):
     key_expired.boolean = True
 
     def confirm(self):
-        if not self.key_expired() and not self.email_address.verified:
+        if not self.email_address.verified:
             email_address = self.email_address
             email_address.verified = True
             email_address.set_as_primary(conditional=True)
@@ -112,10 +112,20 @@ class EmailConfirmation(models.Model):
             "current_site": current_site,
             "key": self.key,
         }
-        subject = render_to_string("account/email/email_confirmation_subject.txt", ctx)
-        subject = "".join(subject.splitlines()) # remove superfluous line breaks
-        message = render_to_string("account/email/email_confirmation_message.txt", ctx)
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [self.email_address.email])
+        try:
+            from brilliant.utils.tmail import send_tmail
+        except:
+            subject = render_to_string("account/email/email_confirmation_subject.txt", ctx)
+            subject = "".join(subject.splitlines()) # remove superfluous line breaks
+            message = render_to_string("account/email/email_confirmation_message.txt", ctx)
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [self.email_address.email])
+        else:
+            if hasattr(self.email_address, 'initial_signup') \
+                    and self.email_address.initial_signup:
+                tpl = "utils/email_confirmation_welcome"
+            else:
+                tpl = "utils/email_confirmation"
+            send_tmail(tpl, [self.email_address.email], ctx)
         self.sent = timezone.now()
         self.save()
         signals.email_confirmation_sent.send(sender=self.__class__, confirmation=self)
