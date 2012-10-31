@@ -1,20 +1,21 @@
 from django.utils import simplejson
-from django.contrib.auth.models import User
 
 from allauth.socialaccount.providers.oauth.client import OAuth
 from allauth.socialaccount.providers.oauth.views import (OAuthAdapter,
                                                          OAuthLoginView,
                                                          OAuthCallbackView)
 from allauth.socialaccount.models import SocialLogin, SocialAccount
+from allauth.utils import get_user_model
 
 from provider import TwitterProvider
 
+User = get_user_model()
 
 class TwitterAPI(OAuth):
     """
     Verifying twitter credentials
     """
-    url = 'https://twitter.com/account/verify_credentials.json'
+    url = 'https://api.twitter.com/1.1/account/verify_credentials.json'
 
     def get_user_info(self):
         user = simplejson.loads(self.query(self.url))

@@ -1,20 +1,20 @@
 from xml.etree import ElementTree
 from xml.parsers.expat import ExpatError
 
-from django.contrib.auth.models import User
-
 from allauth.socialaccount.providers.oauth.client import OAuth
 from allauth.socialaccount.providers.oauth.views import (OAuthAdapter,
                                                          OAuthLoginView,
                                                          OAuthCallbackView)
 from allauth.socialaccount.models import SocialAccount, SocialLogin
+from allauth.utils import valid_email_or_none, get_user_model
 
 from provider import LinkedInProvider
 
+User = get_user_model()
 
 class LinkedInAPI(OAuth):
     url = 'https://api.linkedin.com/v1/people/~'
-    fields = ['id', 'first-name', 'last-name']
+    fields = ['id', 'first-name', 'last-name', 'email-address']
 
     def get_user_info(self):
         url = self.url + ':(%s)' % ','.join(self.fields)
@@ -55,8 +55,10 @@ class LinkedInOAuthAdapter(OAuthAdapter):
                              self.request_token_url)
         extra_data = client.get_user_info()
         uid = extra_data['id']
+        email = valid_email_or_none(extra_data.get('email-address', ''))
         user = User(first_name=extra_data.get('first-name', ''),
-                    last_name=extra_data.get('last-name', ''))
+                    last_name=extra_data.get('last-name', ''),
+                    email=email)
         account = SocialAccount(user=user,
                                 provider=self.provider_id,
                                 extra_data=extra_data,

@@ -9,13 +9,11 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.generic.base import TemplateResponseMixin, View
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import redirect
 
 from django.contrib.auth import logout as django_logout
-
-from allauth.utils import passthrough_login_redirect_url
+from allauth.utils import passthrough_login_redirect_url, get_user_model
 
 from utils import get_default_redirect, complete_signup
 from forms import AddEmailForm, ChangePasswordForm
@@ -27,7 +25,7 @@ from models import EmailAddress, EmailConfirmation
 import app_settings
 import signals
 
-from django.dispatch.dispatcher import Signal
+User = get_user_model()
 
 def shared_sign(request, login_form=None, signup_form=None):
     if not login_form:
@@ -43,7 +41,6 @@ def shared_sign(request, login_form=None, signup_form=None):
             "redirect_field_value": request.REQUEST.get("next"),
     }
     return render_to_response(template_name, RequestContext(request, ctx))
-
 def login(request, **kwargs):
     form_class = kwargs.pop("form_class", LoginForm)
     success_url = get_default_redirect(request, "next")
@@ -54,6 +51,7 @@ def login(request, **kwargs):
             return form.login(request, redirect_url=success_url)
     else:
         form = form_class()
+
     return shared_sign(request, login_form=form)
 
 
@@ -71,6 +69,7 @@ def signup(request, **kwargs):
         form = form_class()
     return shared_sign(request, signup_form=form)
 
+
 class ConfirmEmailView(TemplateResponseMixin, View):
     
     messages = {
@@ -87,7 +86,10 @@ class ConfirmEmailView(TemplateResponseMixin, View):
         }[self.request.method]
     
     def get(self, *args, **kwargs):
-        self.object = self.get_object()
+        try:
+            self.object = self.get_object()
+        except Http404:
+            self.object = None
         ctx = self.get_context_data()
         return self.render_to_response(ctx)
     
@@ -128,7 +130,7 @@ class ConfirmEmailView(TemplateResponseMixin, View):
         return confirmation
     
     def get_queryset(self):
-        qs = EmailConfirmation.objects.all()
+        qs = EmailConfirmation.objects.all_valid()
         qs = qs.select_related("email_address__user")
         return qs
     

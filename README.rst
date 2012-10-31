@@ -88,6 +88,8 @@ Supported Providers
 
 - OpenId
 
+- Persona
+
 - SoundCloud (OAuth2)
 
 - Twitter
@@ -159,6 +161,7 @@ settings.py::
         'allauth.socialaccount.providers.github',
         'allauth.socialaccount.providers.linkedin',
         'allauth.socialaccount.providers.openid',
+        'allauth.socialaccount.providers.persona',
         'allauth.socialaccount.providers.soundcloud',
         'allauth.socialaccount.providers.twitter',
         ...
@@ -196,9 +199,13 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS (=3)
 ACCOUNT_EMAIL_REQUIRED (=False)
   The user is required to hand over an e-mail address when signing up.
 
-ACCOUNT_EMAIL_VERIFICATION (=False)
-  After signing up, keep the user account inactive until the e-mail
-  address is verified.
+ACCOUNT_EMAIL_VERIFICATION (="mandatory" | "optional" | "none")
+  Determines the e-mail verification method during signup. When set to
+  "mandatory" the user is blocked from logging in until the email
+  address is verified. Choose "optional" or "none" to allow logins
+  with an unverified e-mail address. In case of "optional", the e-mail
+  verification mail is still sent, whereas in case of "none" no e-mail
+  verification mails are sent.
 
 ACCOUNT_EMAIL_SUBJECT_PREFIX (="[Site] ")
   Subject-line prefix to use for email messages sent. By default, the
@@ -221,6 +228,9 @@ ACCOUNT_USER_DISPLAY (=a callable returning `user.username`)
   A callable (or string of the form `'some.module.callable_name'`)
   that takes a user as its only argument and returns the display name
   of the user. The default implementation returns `user.username`.
+
+ACCOUNT_USERNAME_MIN_LENGTH (=1)
+  An integer specifying the minimum allowed length of a username.
 
 ACCOUNT_USERNAME_REQUIRED (=True)
   The user is required to enter a username when signing up. Note that
@@ -254,6 +264,13 @@ SOCIALACCOUNT_PROVIDERS (= dict)
 
 Upgrading
 ---------
+
+From 0.8.2
+**********
+
+- The `ACCOUNT_EMAIL_VERIFICATION` setting is no longer a boolean
+  based setting. Use a string value of "none", "optional" or
+  "mandatory" instead.
 
 From 0.8.1
 **********
@@ -422,6 +439,28 @@ By default, `profile` scope is required, and optionally `email` scope
 depending on whether or not `SOCIALACCOUNT_QUERY_EMAIL` is enabled.
 
 
+LinkedIn
+--------
+
+The LinkedIn provider is OAuth based. Register your LinkedIn app over
+at `https://www.linkedin.com/secure/developer?newapp=`. Leave the
+OAuth redirect URL empty.
+
+You can specify the scope to use as follows::
+
+    SOCIALACCOUNT_PROVIDERS = \
+        { 'linkedin': 
+            { 'SCOPE': ['r_emailaddress'] } }
+
+By default, `r_emailaddress` scope is required depending on whether or
+not `SOCIALACCOUNT_QUERY_EMAIL` is enabled.
+
+Note: if you are experiencing issues where it seems as if the scope
+has no effect you may be using an old LinkedIn app that is not
+scope enabled. Please refer to
+`https://developer.linkedin.com/forum/when-will-old-apps-have-scope-parameter-enabled`
+for more background information.
+
 
 OpenID
 ------
@@ -452,6 +491,19 @@ following template tag::
 
     {% load socialaccount %}
     <a href="{% provider_login_url "openid" openid="https://www.google.com/accounts/o8/id" next="/success/url/" %}">Google</a>
+
+
+Persona
+-------
+
+Mozilla Persona does not require any settings. The
+`REQUEST_PARAMETERS` dictionary contains optional parameters that are
+passed as is to the `navigator.id.request()` method to influence the
+look and feel of the Persona dialog::
+
+    SOCIALACCOUNT_PROVIDERS = \
+        { 'persona': 
+            { 'REQUEST_PARAMETERS': {'siteName': 'Example' } } }
 
 
 SoundCloud
