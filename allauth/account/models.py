@@ -104,7 +104,7 @@ class EmailConfirmation(models.Model):
     
     def send(self, request, **kwargs):
         summer_camp_url = reverse('summer_camp_create_signup', kwargs={'source':'camp_signup'})
-        summer_camp_flow = (summer_camp_url in (request.GET.get('next'), request.POST.get('next')))
+        summer_camp_flow = summer_camp_url == request.REQUEST.get('next')
 
         current_site = kwargs["site"] if "site" in kwargs else Site.objects.get_current()
         activate_url = reverse("account_confirm_email", args=[self.key])
