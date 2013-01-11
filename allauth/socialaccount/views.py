@@ -39,7 +39,6 @@ def signup(request, **kwargs):
         return helpers.complete_social_signup(request, sociallogin)
     elif hack:
         form = form_class(sociallogin=sociallogin, request=request)
-
     dictionary = dict(site=Site.objects.get_current(),
                       account=sociallogin.account,
                       form=form)

@@ -4,7 +4,11 @@ from django.contrib.sites.models import Site
 from django.utils import simplejson
 
 import allauth.app_settings
-from allauth.utils import get_login_redirect_url
+from allauth.account import app_settings as account_settings
+from allauth.utils import (get_login_redirect_url,
+                           valid_email_or_none)
+from allauth.account.adapter import get_adapter
+from allauth.account.models import EmailAddress
 
 import providers
 from fields import JSONField
@@ -13,21 +17,29 @@ from fields import JSONField
 class SocialAppManager(models.Manager):
     def get_current(self, provider):
         site = Site.objects.get_current()
-        return self.get(site=site,
+        return self.get(sites__id=site.id,
                         provider=provider)
 
 
 class SocialApp(models.Model):
     objects = SocialAppManager()
 
-    site = models.ForeignKey(Site)
     provider = models.CharField(max_length=30, 
                                 choices=providers.registry.as_choices())
     name = models.CharField(max_length=40)
+    client_id = models.CharField(max_length=100,
+                                 help_text='App ID, or consumer key')
     key = models.CharField(max_length=100,
-                           help_text='App ID, or consumer key')
+                           blank=True,
+                           help_text='Key (Stack Exchange only)')
     secret = models.CharField(max_length=100,
-                              help_text='API secret, or consumer secret')
+                              help_text='API secret, client secret, or'
+                              ' consumer secret')
+    # Most apps can be used across multiple domains, therefore we use
+    # a ManyToManyField. Note that Facebook requires an app per domain
+    # (unless the domains share a common base name).
+    # blank=True allows for disabling apps without removing them
+    sites = models.ManyToManyField(Site, blank=True)
 
     def __unicode__(self):
         return self.name
@@ -113,14 +125,18 @@ class SocialLogin(object):
     url (e.g. OAuth2 `state` parameter) -- do not put any secrets in
     there. It currently only contains the url to redirect to after
     login.
+
+    `email_addresses` (list of `EmailAddress`): Optional list of
+    e-mail addresses retrieved from the provider.
     """
 
-    def __init__(self, account, token=None):
+    def __init__(self, account, token=None, email_addresses=[]):
         if token:
             assert token.account is None or token.account == account
             token.account = account
         self.token = token
         self.account = account
+        self.email_addresses = email_addresses
         self.state = {}
 
     def save(self):
@@ -131,6 +147,17 @@ class SocialLogin(object):
         if self.token:
             self.token.account = self.account
             self.token.save()
+        for email_address in self.email_addresses:
+            # Pick up only valid ones...
+            email = valid_email_or_none(email_address.email)
+            if not email:
+                continue
+            # ... and non-conflicting ones...
+            if (account_settings.UNIQUE_EMAIL 
+                and EmailAddress.objects.filter(email__iexact=email).exists()):
+                continue
+            email_address.user = user
+            email_address.save()
 
     @property
     def is_existing(self):
@@ -167,8 +194,9 @@ class SocialLogin(object):
         except SocialAccount.DoesNotExist:
             pass
     
-    def get_redirect_url(self, 
-                         fallback=allauth.app_settings.LOGIN_REDIRECT_URL):
+    def get_redirect_url(self, request, fallback=True):
+        if fallback and type(fallback) == bool:
+            fallback = get_adapter().get_login_redirect_url(request)
         url = self.state.get('next') or fallback
         return url
             

@@ -1,3 +1,46 @@
+2013-01-11  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* socialaccount: Added SocialAccountAdapter hook to allow for
+	intervention in social logins.
+
+2013-01-07  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* google: support for Google's `verified_email` flag to determine
+	whether or not to send confirmation e-mails.
+
+2012-12-22  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* socialaccount: Added support for Stack Exchange.
+
+2012-12-14  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* socialaccount: Added `get_social_accounts` template tag.
+
+	* account: Default URL to redirect to after login can now be
+	overriden via the adapter, both for login and e-mail confirmation
+	redirects.
+
+2012-12-06  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* Version 0.8.3 released.
+
+2012-11-27  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* Markus Thielen contributed a German translation, thanks!
+
+2012-11-26  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* The `site` foreign key from `SocialApp` to `Site` has been
+	replaced by a `ManyToManyField`. Many apps can be used across
+	multiple domains (Facebook cannot).
+
+2012-11-24  Raymond Penners  <raymond.penners@intenct.nl>
+
+	* account: Added adapter class for increased pluggability. Added
+	hook for 3rd party invitation system to by pass e-mail
+	verification (`stash_email_verified`). Moved sending of mail to
+	adapter.
+
 2012-10-23  Raymond Penners  <raymond.penners@intenct.nl>
 
 	* account: Added option to completely disable e-mail verification

@@ -1,14 +1,11 @@
 import datetime
 
-from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
-from django.conf import settings
 from django.db import models
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.sites.models import Site
-from django.template.loader import render_to_string
 
 from allauth import app_settings as allauth_app_settings
 import app_settings
@@ -16,6 +13,7 @@ import signals
 
 from utils import random_token
 from managers import EmailAddressManager, EmailConfirmationManager
+from adapter import get_adapter
 
 class EmailAddress(models.Model):
     
@@ -70,7 +68,7 @@ class EmailAddress(models.Model):
 class EmailConfirmation(models.Model):
     
     email_address = models.ForeignKey(EmailAddress)
-    created = models.DateTimeField(default=timezone.now())
+    created = models.DateTimeField(default=timezone.now)
     sent = models.DateTimeField(null=True)
     key = models.CharField(max_length=64, unique=True)
     
@@ -105,7 +103,6 @@ class EmailConfirmation(models.Model):
     def send(self, request, **kwargs):
         summer_camp_url = reverse('summer_camp_create_signup', kwargs={'source':'camp_signup'})
         summer_camp_flow = summer_camp_url == request.REQUEST.get('next')
-
         current_site = kwargs["site"] if "site" in kwargs else Site.objects.get_current()
         activate_url = reverse("account_confirm_email", args=[self.key])
         activate_url = request.build_absolute_uri(activate_url)
@@ -118,10 +115,9 @@ class EmailConfirmation(models.Model):
         try:
             from brilliant.utils.tmail import send_tmail
         except:
-            subject = render_to_string("account/email/email_confirmation_subject.txt", ctx)
-            subject = "".join(subject.splitlines()) # remove superfluous line breaks
-            message = render_to_string("account/email/email_confirmation_message.txt", ctx)
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [self.email_address.email])
+            get_adapter().send_mail('account/email/email_confirmation',
+                                self.email_address.email,
+                                ctx)
         else:
             if hasattr(self.email_address, 'initial_signup') \
                     and self.email_address.initial_signup:

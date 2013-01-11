@@ -92,6 +92,8 @@ Supported Providers
 
 - SoundCloud (OAuth2)
 
+- Stack Exchange (OAuth2)
+
 - Twitter
 
 Note: OAuth/OAuth2 support is built using a common code base, making it easy to add support for additional OAuth/OAuth2 providers. More will follow soon...
@@ -163,6 +165,7 @@ settings.py::
         'allauth.socialaccount.providers.openid',
         'allauth.socialaccount.providers.persona',
         'allauth.socialaccount.providers.soundcloud',
+        'allauth.socialaccount.providers.stackexchange',
         'allauth.socialaccount.providers.twitter',
         ...
     )
@@ -181,6 +184,10 @@ Configuration
 
 Available settings:
 
+ACCOUNT_ADAPTER (="allauth.account.adapter.DefaultAccountAdapter")
+  Specifies the adapter class to use, allowing you to alter certain
+  default behaviour.
+
 ACCOUNT_AUTHENTICATION_METHOD (="username" | "email" | "username_email")
   Specifies the login method to use -- whether the user logs in by
   entering his username, e-mail address, or either one of both.
@@ -189,9 +196,10 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL (=settings.LOGIN_URL)
   The URL to redirect to after a successful e-mail confirmation, in case no
   user is logged in.
 
-ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL (=settings.LOGIN_REDIRECT_URL)
-  The URL to redirect to after a successful e-mail confirmation, in case of
-  an authenticated user.
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL (=None)
+  The URL to redirect to after a successful e-mail confirmation, in
+  case of an authenticated user. Set to `None` to use
+  `settings.LOGIN_REDIRECT_URL`.
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS (=3)
   Determines the expiration date of email confirmation mails (# of days).
@@ -265,12 +273,32 @@ SOCIALACCOUNT_PROVIDERS (= dict)
 Upgrading
 ---------
 
+From 0.8.3
+**********
+
+- `requests` is now a dependency (dropped `httplib2`).
+
+- Added a new column `SocialApp.client_id`. The value of `key` needs
+  to be moved to the new `client_id` column. The `key` column is
+  required for Stack Exchange. Migrations are in place to handle all
+  of this automatically.
+
 From 0.8.2
 **********
 
 - The `ACCOUNT_EMAIL_VERIFICATION` setting is no longer a boolean
   based setting. Use a string value of "none", "optional" or
   "mandatory" instead.
+
+- The template "account/password_reset_key_message.txt" has been moved
+  to "account/email/password_reset_key_message.txt". The subject of
+  the message has been moved into a template
+  ("account/email/password_reset_key_subject.txt").
+
+- The `site` foreign key from `SocialApp` to `Site` has been replaced
+  by a `ManyToManyField`. Many apps can be used across multiple
+  domains (Facebook cannot).
+
 
 From 0.8.1
 **********
@@ -513,6 +541,25 @@ SoundCloud allows you to choose between OAuth1 and OAuth2.  Choose the
 latter. 
 
 
+Stack Exchange
+--------------
+
+Register your OAuth2 over at
+`http://stackapps.com/apps/oauth/register`.  Do not enable "Client
+Side Flow". For local development you can simply use "localhost" for
+the OAuth domain.
+
+As for all providers, provider specific data is stored in
+`SocialAccount.extra_data`. For Stack Exchange we need to choose what
+data to store there by choosing the Stack Exchange site (e.g. Stack
+Overflow, or Server Fault). This can be controlled by means of the
+`SITE` setting::
+
+    SOCIALACCOUNT_PROVIDERS = \
+        { 'stackexchange': 
+            { 'SITE': 'stackoverflow' } }
+
+
 Signals
 =======
 
@@ -566,7 +613,7 @@ Or, if you need to use in a `{% blocktrans %}`::
 
     {% load account %}
 
-    {% user_display user as user_display}
+    {% user_display user as user_display %}
     {% blocktrans %}{{ user_display }} has logged in...{% endblocktrans %}
 
 Then, override the `ACCOUNT_USER_DISPLAY` setting with your project
@@ -583,6 +630,16 @@ Use the `provider_login_url` tag to generate provider specific login URLs::
     <a href="{% provider_login_url "openid" openid="https://www.google.com/accounts/o8/id" next="/success/url/" %}">Google</a>
     <a href="{% provider_login_url "twitter" %}">Twitter</a>
 
+
+For easy access to the social accounts for a user::
+
+    {% get_social_accounts user as accounts %}
+
+Then::
+
+    {{accounts.twitter}} -- a list of connected Twitter accounts
+    {{accounts.twitter.0}} -- the first Twitter account
+    {% if accounts %} -- if there is at least one social account
 
 Decorators
 ==========
@@ -624,6 +681,7 @@ Showcase
 - http://www.edithuddle.com
 - http://kwatsi.com
 - http://www.smartgoalapp.com
+- http://www.neekanee.com/
 - ...
 
 Please mail me (raymond.penners@intenct.nl) links to sites that have

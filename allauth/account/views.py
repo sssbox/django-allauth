@@ -22,8 +22,8 @@ from forms import ResetPasswordForm, SetPasswordForm, SignupForm
 from utils import sync_user_email_addresses
 from models import EmailAddress, EmailConfirmation
 
-import app_settings
 import signals
+from adapter import get_adapter
 
 User = get_user_model()
 
@@ -63,7 +63,7 @@ def signup(request, **kwargs):
     if request.method == "POST":
         form = form_class(request.POST)
         if form.is_valid():
-            user = form.save(request=request)
+            user = form.save(request)
             return complete_signup(request, user, success_url)
     else:
         form = form_class()
@@ -80,10 +80,10 @@ class ConfirmEmailView(TemplateResponseMixin, View):
     }
     
     def get_template_names(self):
-        return {
-            "GET": ["account/email_confirm.html"],
-            "POST": ["account/email_confirmed.html"],
-        }[self.request.method]
+        if self.request.method == 'POST':
+            return ["account/email_confirmed.html"]
+        else:
+            return [ "account/email_confirm.html" ]
     
     def get(self, *args, **kwargs):
         try:
@@ -145,10 +145,7 @@ class ConfirmEmailView(TemplateResponseMixin, View):
             if redirect_to_name:
                 return reverse(redirect_to_name)
         except: pass
-        if self.request.user.is_authenticated():
-            return app_settings.EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL
-        else:
-            return app_settings.EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL
+        return get_adapter().get_email_confirmation_redirect_url(self.request)
 
 
 confirm_email = ConfirmEmailView.as_view()
