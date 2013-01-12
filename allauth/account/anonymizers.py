@@ -1,8 +1,10 @@
 from allauth.account.models import EmailAddress, EmailConfirmation
 from django.utils.timezone import make_aware, utc
 from anonymizer import Anonymizer
+from django.conf import settings
 
 similar_datetime = lambda anon, obj, field, val: make_aware(anon.faker.datetime(field=field, val=val), utc)
+our_email = lambda anon, obj, field, val: getattr(settings, 'EMAIL_START', '') + anon.faker.name(field=field).replace(' ', '_') + getattr(settings, 'EMAIL_END', '@example.com') if not obj.is_staff else val
 
 class EmailAddressAnonymizer(Anonymizer):
 
@@ -10,7 +12,7 @@ class EmailAddressAnonymizer(Anonymizer):
 
     attributes = [
         ('id', "SKIP"),
-        ('email', "email"),
+        ('email', our_email),
         ('user_id', "SKIP"),
         ('verified', "SKIP"),
         ('primary', "SKIP"),
