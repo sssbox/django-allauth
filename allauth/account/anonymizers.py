@@ -4,7 +4,7 @@ from anonymizer import Anonymizer
 from django.conf import settings
 
 similar_datetime = lambda anon, obj, field, val: make_aware(anon.faker.datetime(field=field, val=val), utc)
-our_email = lambda anon, obj, field, val: getattr(settings, 'EMAIL_START', '') + anon.faker.name(field=field).replace(' ', '_') + getattr(settings, 'EMAIL_END', '@example.com') if not obj.is_staff else val
+our_email = lambda anon, obj, field, val: getattr(settings, 'EMAIL_START', '') + anon.faker.name(field=field).replace(' ', '_') + getattr(settings, 'EMAIL_END', '@example.com')
 
 class EmailAddressAnonymizer(Anonymizer):
 
