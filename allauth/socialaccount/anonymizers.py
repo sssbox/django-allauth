@@ -27,7 +27,7 @@ class SocialAccountAnonymizer(Anonymizer):
     attributes = [
         ('id', "SKIP"),
         ('user_id', "SKIP"),
-        ('provider', "varchar"),
+        ('provider', "SKIP"),
         ('uid', "SKIP"),
         ('last_login', similar_datetime),
         ('date_joined', similar_datetime),
