@@ -276,8 +276,8 @@ class SignupForm(BaseSignupForm):
     
     def save(self, request):
         new_user = self.create_user()
-        super(SignupForm, self).save(new_user)
-        setup_user_email(request, new_user)
+        super(SignupForm, self).save(new_user, request=request)
+        #setup_user_email(request, new_user)
         #send_email_confirmation(request, new_user)
 
         self.after_signup(new_user)
