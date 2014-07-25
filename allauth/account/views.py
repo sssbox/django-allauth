@@ -41,7 +41,7 @@ class RedirectAuthenticatedUserMixin(object):
 
     def get_authenticated_redirect_url(self):
         return self.get_success_url()
-        
+
 class LoginView(RedirectAuthenticatedUserMixin, FormView):
     form_class = LoginForm
     template_name = "account/login.html"
@@ -107,7 +107,7 @@ class SignupView(RedirectAuthenticatedUserMixin, CloseableSignupMixin, FormView)
     def get_success_url(self):
         ret = self.success_url
         if not ret:
-            ret = get_default_redirect(self.request, 
+            ret = get_default_redirect(self.request,
                                        self.redirect_field_name)
         return ret
 
@@ -130,20 +130,20 @@ class SignupView(RedirectAuthenticatedUserMixin, CloseableSignupMixin, FormView)
 signup = SignupView.as_view()
 
 class ConfirmEmailView(TemplateResponseMixin, View):
-    
+
     messages = {
         "email_confirmed": {
             "level": messages.SUCCESS,
             "text": _("You have confirmed %(email)s.")
         }
     }
-    
+
     def get_template_names(self):
         if self.request.method == 'POST':
             return ["account/email_confirmed.html"]
         else:
             return [ "account/email_confirm.html" ]
-    
+
     def get(self, *args, **kwargs):
         try:
             self.object = self.get_object()
@@ -151,7 +151,7 @@ class ConfirmEmailView(TemplateResponseMixin, View):
             self.object = None
         ctx = self.get_context_data()
         return self.render_to_response(ctx)
-    
+
     def post(self, *args, **kwargs):
         self.object = confirmation = self.get_object()
         confirmation.confirm()
@@ -174,7 +174,7 @@ class ConfirmEmailView(TemplateResponseMixin, View):
                 }
             )
         return redirect(redirect_url)
-    
+
     def get_object(self, queryset=None):
         if queryset is None:
             queryset = self.get_queryset()
@@ -182,17 +182,17 @@ class ConfirmEmailView(TemplateResponseMixin, View):
             return queryset.get(key=self.kwargs["key"].lower())
         except EmailConfirmation.DoesNotExist:
             raise Http404()
-    
+
     def get_queryset(self):
         qs = EmailConfirmation.objects.all_valid()
         qs = qs.select_related("email_address__user")
         return qs
-    
+
     def get_context_data(self, **kwargs):
         ctx = kwargs
         ctx["confirmation"] = self.object
         return ctx
-    
+
     def get_redirect_url(self):
         return get_adapter().get_email_confirmation_redirect_url(self.request)
 
@@ -252,7 +252,7 @@ def email(request, **kwargs):
                         else:
                             email_address.delete()
                             signals.email_removed.send(sender=request.user.__class__,
-                                                       request=request, 
+                                                       request=request,
                                                        user=request.user,
                                                        email_address=email_address)
                             messages.add_message(request, messages.SUCCESS,
@@ -403,7 +403,7 @@ def password_reset_from_key(request, uidb36, key, **kwargs):
                     ugettext(u"Password successfully changed.")
                 )
                 signals.password_reset.send(sender=request.user.__class__,
-                        request=request, user=request.user)
+                        request=request, user=user)
                 password_reset_key_form = None
         else:
             password_reset_key_form = form_class()
