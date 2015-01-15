@@ -16,7 +16,7 @@ from forms import FacebookConnectForm
 from provider import FacebookProvider
 
 def fb_complete_login(app, token):
-    resp = requests.get('https://graph.facebook.com/me',
+    resp = requests.get('https://graph.facebook.com/v2.2/me',
                         params={ 'access_token': token.token })
     extra_data = resp.json()
     uid = extra_data['id']
@@ -36,7 +36,7 @@ class FacebookOAuth2Adapter(OAuth2Adapter):
     provider_id = FacebookProvider.id
 
     authorize_url = 'https://www.facebook.com/dialog/oauth'
-    access_token_url = 'https://graph.facebook.com/oauth/access_token'
+    access_token_url = 'https://graph.facebook.com/v2.2/oauth/access_token'
     expires_in_key = 'expires'
 
     def complete_login(self, request, app, access_token, **kwargs):

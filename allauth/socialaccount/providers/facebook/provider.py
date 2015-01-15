@@ -22,7 +22,7 @@ class FacebookAccount(ProviderAccount):
 
     def get_avatar_url(self):
         uid = self.account.uid
-        return 'http://graph.facebook.com/%s/picture?type=large' % uid
+        return 'http://graph.facebook.com/v2.2/%s/picture?type=large' % uid
 
     def __unicode__(self):
         dflt = super(FacebookAccount, self).__unicode__()
